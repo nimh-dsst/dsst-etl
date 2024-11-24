@@ -13,3 +13,4 @@ pdfs/*
 test-pdf/*.pdf
 dsst_etl.egg-info/*
 uv.lock
+.coverage

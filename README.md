@@ -124,7 +124,7 @@ docker compose -f .docker/postgres-compose.yaml down -v
 pre-commit install
 
 # run the pre-commit hooks on all files
-pre-commit run -all
+   pre-commit run --all-files
 
 # run the tests
 pytest

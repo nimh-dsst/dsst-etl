@@ -4,9 +4,15 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
+POSTGRES_DB=pdx
+POSTGRES_DB_UNIT_TEST=pdx
 
 # requests will be rejected without user-agent
 USER_AGENT=
 
 # metapub; get key from https://pubmed.ncbi.nlm.nih.gov for faster requests
 NCBI_API_KEY=
+
+S3_BUCKET_NAME=osm-pdf-uploads
+HOSTNAME=localhost
+USERNAME=quang

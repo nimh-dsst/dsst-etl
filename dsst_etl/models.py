@@ -1,8 +1,5 @@
-from datetime import datetime
-
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, LargeBinary, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -14,12 +11,8 @@ class Works(Base):
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    initial_document_id = Column(
-        Integer, ForeignKey("documents.id"), nullable=False
-    )
-    primary_document_id = Column(
-        Integer, ForeignKey("documents.id"), nullable=False
-    )
+    initial_document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
+    primary_document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
     provenance_id = Column(Integer, ForeignKey("provenance.id"))
 
     # Relationships
@@ -30,7 +23,7 @@ class Works(Base):
 
 class Documents(Base):
     __tablename__ = "documents"
-    
+
     id = Column(Integer, primary_key=True)
     hash_data = Column(String, nullable=False, unique=True)
     created_at = Column(DateTime, default=func.now())
@@ -42,7 +35,6 @@ class Documents(Base):
     # provenance = relationship("Provenance")
 
 
-
 class Provenance(Base):
     __tablename__ = "provenance"
 
@@ -52,4 +44,3 @@ class Provenance(Base):
     compute = Column(Text)
     personnel = Column(Text)
     comment = Column(Text)
-

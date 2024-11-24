@@ -21,6 +21,7 @@ dependencies = [
     "pre-commit>=4.0.1",
     "pytest>=8.3.3",
     "boto3",
+    "sqlalchemy-utils>=0.41.2",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +36,9 @@ dev = [
     "pandas-stubs",
     "types-beautifulsoup4",
     "types-psycopg2",
+]
+ci = [
+    "coverage>=7.6.7",
 ]
 
 
