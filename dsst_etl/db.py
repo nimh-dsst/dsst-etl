@@ -1,25 +1,32 @@
 import logging
 
+from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
-
-from dsst_etl import get_db_engine
 
 from .models import Base
 
 logger = logging.getLogger(__name__)
 
 
-def get_db_session(is_test=False):
-    engine = get_db_engine(is_test)
+def get_db_session(engine):
     Session = sessionmaker(bind=engine)
     return Session()
 
 
-def init_db(is_test=False):
-    engine = get_db_engine(is_test)
+def init_db(engine):
+    logger.info("Initializing database")
 
     if not database_exists(engine.url):
-        logger.info("Creating database.....")
+        logger.info("Creating database...")
         create_database(engine.url)
+        logger.info("Database created")
+
+    logger.info("Creating tables...")
     Base.metadata.create_all(engine)
+    logger.info("Tables created successfully")
+
+    # Log the list of tables
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    logger.info(f"Tables in the database: {tables}")

@@ -1,5 +1,7 @@
+from dsst_etl import get_db_engine
 from dsst_etl.db import init_db
 
 
 def test_init_db():
-    init_db(is_test=True)
+    engine = get_db_engine(is_test=True)
+    init_db(engine)
