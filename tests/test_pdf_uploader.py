@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from sqlalchemy import update, inspect
+from dsst_etl import get_db_engine
 from dsst_etl.upload_pdfs import PDFUploader
 from dsst_etl.db import get_db_session
 from dsst_etl.models import Documents, Provenance, Works
@@ -13,23 +14,21 @@ class TestPDFUploader(unittest.TestCase):
 
     @patch("dsst_etl.upload_pdfs.boto3.client")
     def setUp(self, mock_boto_client):
-        # Mock S3 client
         self.mock_s3_client = MagicMock()
         mock_boto_client.return_value = self.mock_s3_client
+        self.engine = get_db_engine(is_test=True)
 
-        init_db(is_test=True)
+        init_db(self.engine)
 
         # Create a new session for each test
-        self.session = get_db_session()
-        # Start a transaction that we can roll back after each test
-        self.transaction = self.session.begin()
-
+        self.session = get_db_session(self.engine)
+        
         # Initialize PDFUploader with the session
         self.uploader = PDFUploader(self.session)
 
     def tearDown(self):
         # Rollback the transaction
-        self.session.rollback()
+        
 
         # Check if the Works table exists before attempting to update or delete
         inspector = inspect(self.session.bind)
@@ -43,7 +42,6 @@ class TestPDFUploader(unittest.TestCase):
         # Check if the Documents table exists before attempting to update or delete
         if "documents" in inspector.get_table_names():
             self.session.execute(update(Documents).values(provenance_id=None))
-            self.session.execute(update(Documents).values(work_id=None))
             self.session.commit()
 
         # Check if the Provenance table exists before attempting to delete

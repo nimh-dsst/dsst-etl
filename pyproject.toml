@@ -22,6 +22,8 @@ dependencies = [
     "pytest>=8.3.3",
     "boto3",
     "sqlalchemy-utils>=0.41.2",
+    "pandas",
+    "pyarrow",
     "pdf2doi",
     "tqdm",
     "pypdf",
@@ -43,6 +45,7 @@ dev = [
 ]
 ci = [
     "coverage>=7.6.7",
+    "alembic",
 ]
 
 
@@ -70,3 +73,6 @@ target-version = [ "py311"]
 [tool.ruff]
 line-length = 88
 indent-width = 4
+
+[tool.poetry.dependencies]
+alembic = "^1.7"
