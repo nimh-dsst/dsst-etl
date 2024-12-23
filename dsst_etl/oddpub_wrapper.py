@@ -41,32 +41,59 @@ class OddpubWrapper:
             logger.error(f"Failed to initialize OddpubWrapper: {str(e)}")
             raise
 
-    def process_pdfs(self, pdf_folder: str) -> OddpubMetrics:
+    def process_pdfs(
+        self, pdf_folder: str, force_upload: bool = False
+    ) -> OddpubMetrics:
         """
         Process PDFs through the complete ODDPub workflow and store results in database.
 
         Args:
             pdf_folder (str): Path to folder containing PDF files
+            force_upload (bool): Skip confirmation prompt if True (-y flag)
 
         Returns:
             OddpubMetrics: Results of open data analysis
         """
         try:
+            results = []
             # Iterate over each PDF file in the folder
             for pdf_file in Path(pdf_folder).glob("*.pdf"):
+                logger.info(f"Processing {pdf_file.name}...")
                 with open(pdf_file, "rb") as f:
-                    # Use requests to call the API
                     response = requests.post(
                         f"{self.oddpub_host_api}/oddpub", files={"file": f}
                     )
                     response.raise_for_status()
 
                     r_result = response.json()
-                    oddpub_metrics = OddpubMetrics(**r_result)
-                    oddpub_metrics.work_id = self.work_id
-                    oddpub_metrics.document_id = self.document_id
-                    self.db_session.add(oddpub_metrics)
-                    self.db_session.commit()
+                    results.append((pdf_file.name, r_result))
+
+            # Display results summary
+            logger.info("Results Summary:")
+            for filename, result in results:
+                logger.info(f"\n{filename}:")
+                for key, value in result.items():
+                    logger.info(f"  {key}: {value}")
+
+            # Ask for confirmation before database upload
+            if not force_upload:
+                confirm = input(
+                    "\nDo you want to upload these results to the database? (y/N): "
+                )
+                if confirm.lower() != "y":
+                    logger.info("Database upload cancelled by user")
+                    return None
+
+            # Upload to database
+            for _, r_result in results:
+                oddpub_metrics = OddpubMetrics(**r_result)
+                oddpub_metrics.work_id = self.work_id
+                oddpub_metrics.document_id = self.document_id
+                self.db_session.add(oddpub_metrics)
+
+            self.db_session.commit()
+            logger.info(f"Successfully processed and uploaded {len(results)} files")
+            return oddpub_metrics
 
         except Exception as e:
             logger.error(f"Error in PDF processing workflow: {str(e)}")

@@ -38,7 +38,7 @@ class TestOddpubWrapper(unittest.TestCase):
 
     def test_oddpub_wrapper_without_mock_api(self):
         self.wrapper.oddpub_host_api = "http://localhost:8071"
-        self.wrapper.process_pdfs("tests/pdf-test")
+        self.wrapper.process_pdfs("tests/pdf-test", force_upload=True)
         data = self.session.query(OddpubMetrics).all()
         self.assertEqual(len(data), 2)
         articles = [row.article for row in data]
@@ -75,7 +75,7 @@ class TestOddpubWrapper(unittest.TestCase):
         ]
 
         # Call the method
-        self.wrapper.process_pdfs(pdf_folder)
+        self.wrapper.process_pdfs(pdf_folder, force_upload=True)
 
         # Assertions
         self.assertEqual(self.session.query(OddpubMetrics).count(), len(pdf_paths))
