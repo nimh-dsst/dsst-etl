@@ -1,5 +1,5 @@
 from sqlalchemy import inspect
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy_utils import database_exists
 
 from dsst_etl import logger
@@ -8,6 +8,12 @@ from dsst_etl import logger
 def get_db_session(engine):
     Session = sessionmaker(bind=engine)
     return Session()
+
+
+def get_db_session_new(engine=None, bind=None):
+    if bind:
+        return Session(bind=bind)
+    return Session(engine)
 
 
 def init_db(engine):
