@@ -250,3 +250,15 @@ class RTransparentPublication(Base):
 
     work_id = Column(Integer, ForeignKey("works.id"), nullable=True)
     provenance_id = Column(Integer, ForeignKey("provenance.id"), nullable=True)
+
+
+class Identifier(Base):
+    __tablename__ = "identifier"
+
+    core_id = Column(Integer, primary_key=True, autoincrement=True)
+    pmid = Column(Integer, nullable=True)
+    pmcid = Column(String, nullable=True)
+    doi = Column(String, nullable=True)
+    document_id = Column(ForeignKey("documents.id"), nullable=False)
+    provenance_id = Column(ForeignKey("provenance.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now())
