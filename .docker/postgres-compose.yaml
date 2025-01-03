@@ -1,6 +1,5 @@
 services:
   postgres:
-    platform: linux/amd64
     image: postgres:15
     container_name: postgres_db
     env_file: "../.env"
