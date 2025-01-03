@@ -250,3 +250,35 @@ class RTransparentPublication(Base):
 
     work_id = Column(Integer, ForeignKey("works.id"), nullable=True)
     provenance_id = Column(Integer, ForeignKey("provenance.id"), nullable=True)
+
+
+class Identifier(Base):
+    __tablename__ = "identifier"
+
+    core_id = Column(Integer, primary_key=True, autoincrement=True)
+    pmid = Column(Integer, nullable=True)
+    pmcid = Column(String, nullable=True)
+    doi = Column(String, nullable=True)
+    document_id = Column(ForeignKey("documents.id"), nullable=False)
+    provenance_id = Column(ForeignKey("provenance.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+
+class OddpubMetrics(Base):
+    __tablename__ = "oddpub_metrics"
+
+    id = Column(Integer, primary_key=True)
+    article = Column(String, unique=True, nullable=True, index=True)
+    is_open_data = Column(Boolean, nullable=True, default=False)
+    open_data_category = Column(String)
+    is_reuse = Column(Boolean, nullable=True, default=False)
+    is_open_code = Column(Boolean, nullable=True, default=False)
+    is_open_data_das = Column(Boolean, nullable=True, default=False)
+    is_open_code_cas = Column(Boolean, nullable=True, default=False)
+    das = Column(String)
+    open_data_statements = Column(String)
+    cas = Column(String)
+    open_code_statements = Column(String)
+    work_id = Column(Integer, ForeignKey("works.id"), nullable=True)
+    provenance_id = Column(Integer, ForeignKey("provenance.id"), nullable=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
