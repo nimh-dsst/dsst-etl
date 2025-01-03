@@ -13,5 +13,13 @@ services:
       timeout: 5s  # Added missing timeout value
       retries: 5
 
+  oddpub:
+    build:
+      context: ../services/oddpub
+      dockerfile: Dockerfile
+    container_name: oddpub_service
+    ports:
+      - "8071:8071"
+
 volumes:
   postgres_data:

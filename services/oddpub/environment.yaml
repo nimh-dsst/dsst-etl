@@ -1,0 +1,28 @@
+name: osm
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - fastapi
+  - lxml
+  - pandas
+  - pip
+  - psutil
+  - python
+  - requests
+  - rpy2
+  - uvicorn
+  - r-devtools
+  - r-dplyr
+  - r-furrr
+  - r-lubridate
+  - r-pdftools
+  - r-purrr
+  - r-readr
+  - r-rlang
+  - r-stringr
+  - r-tibble
+  - r-tidyr
+  - r-tokenizers
+  - r-vctrs
+  - r-yaml

@@ -16,3 +16,5 @@ NCBI_API_KEY=
 S3_BUCKET_NAME=osm-pdf-uploads
 HOSTNAME=localhost
 USERNAME=quang
+
+ODDPUB_HOST_API=http://localhost:8071
