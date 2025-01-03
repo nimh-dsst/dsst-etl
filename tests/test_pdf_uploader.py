@@ -1,61 +1,22 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from sqlalchemy import update, inspect
-from dsst_etl import get_db_engine
 from dsst_etl.upload_pdfs import PDFUploader
-from dsst_etl.db import get_db_session
 from dsst_etl.models import Documents, Provenance, Works
 from pathlib import Path
-from dsst_etl.db import init_db
 
+from tests.base_test import BaseTest # type: ignore
 
-class TestPDFUploader(unittest.TestCase):
+class TestPDFUploader(BaseTest):
+
 
     @patch("dsst_etl.upload_pdfs.boto3.client")
     def setUp(self, mock_boto_client):
+        super().setUp()
         self.mock_s3_client = MagicMock()
         mock_boto_client.return_value = self.mock_s3_client
-        self.engine = get_db_engine(is_test=True)
-
-        init_db(self.engine)
-
-        # Create a new session for each test
-        self.session = get_db_session(self.engine)
-        
         # Initialize PDFUploader with the session
         self.uploader = PDFUploader(self.session)
-
-    def tearDown(self):
-        # Rollback the transaction
-        
-
-        # Check if the Works table exists before attempting to update or delete
-        inspector = inspect(self.session.bind)
-        if "works" in inspector.get_table_names():
-            # Ensure all data is removed
-            self.session.execute(update(Works).values(provenance_id=None))
-            self.session.execute(update(Works).values(initial_document_id=None))
-            self.session.execute(update(Works).values(primary_document_id=None))
-            self.session.commit()
-
-        # Check if the Documents table exists before attempting to update or delete
-        if "documents" in inspector.get_table_names():
-            self.session.execute(update(Documents).values(provenance_id=None))
-            self.session.commit()
-
-        # Check if the Provenance table exists before attempting to delete
-        if "provenance" in inspector.get_table_names():
-            self.session.query(Provenance).delete()
-
-        if "documents" in inspector.get_table_names():
-            self.session.query(Documents).delete()
-
-        if "works" in inspector.get_table_names():
-            self.session.query(Works).delete()
-
-        self.session.commit()
-        self.session.close()
 
     def test_upload_pdfs_success(self):
         # Mock successful upload

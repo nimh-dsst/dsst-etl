@@ -10,9 +10,11 @@ import numpy as np
 from dsst_etl.db import get_db_session, init_db
 import logging
 
+from tests.base_test import BaseTest # type: ignore 
+
 logger = logging.getLogger(__name__)
 
-class TestRTransparentDataUploader(unittest.TestCase):
+class TestRTransparentDataUploader(BaseTest):
 
     def mock_data(self):
         logger.info("Creating mock data")
@@ -28,28 +30,9 @@ class TestRTransparentDataUploader(unittest.TestCase):
         
 
     def setUp(self):
-        self.engine = get_db_engine(is_test=True)
-
-        init_db(self.engine )
-        # Create a new session for each test
-        self.session = get_db_session(self.engine)
-
-        # Start a transaction that we can roll back after each test
-        # self.transaction = self.session.begin()
-
+        super().setUp()
         self.uploader = RTransparentDataUploader(self.session)
 
-    def tearDown(self):
-        # # Rollback the transaction
-        # self.session.rollback()
-
-         # Check if the Works table exists before attempting to update or delete
-        inspector = inspect(self.engine)
-        tables = inspector.get_table_names()
-        logger.info(f"Tables in the tearDown: {tables}")
-        if "rtransparent_publication" in tables:
-            self.session.query(RTransparentPublication).delete()
-        self.session.commit()
 
     @patch('pandas.read_feather')
     def test_read_file_feather(self, mock_read_feather):
