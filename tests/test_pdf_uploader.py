@@ -66,7 +66,7 @@ class TestPDFUploader(unittest.TestCase):
             base_dir / "pdf-test" / "test1.pdf",
             base_dir / "pdf-test" / "test2.pdf",
         ]
-        successful_uploads, failed_uploads = self.uploader.upload_pdfs(pdf_paths)
+        successful_uploads, failed_uploads = self.uploader.__upload_pdfs(pdf_paths)
 
         self.assertEqual(successful_uploads, pdf_paths)
         self.assertEqual(failed_uploads, [])
@@ -81,7 +81,7 @@ class TestPDFUploader(unittest.TestCase):
             base_dir / "pdf-test" / "test1.pdf",
             base_dir / "pdf-test" / "test2.pdf",
         ]
-        successful_uploads, failed_uploads = self.uploader.upload_pdfs(pdf_paths)
+        successful_uploads, failed_uploads = self.uploader.__upload_pdfs(pdf_paths)
 
         self.assertEqual(successful_uploads, [])
         self.assertEqual(failed_uploads, pdf_paths)
@@ -89,7 +89,7 @@ class TestPDFUploader(unittest.TestCase):
     def test_create_document_records(self):
         base_dir = Path(__file__).resolve().parent
         successful_uploads = [base_dir / "pdf-test" / "test1.pdf"]
-        documents = self.uploader.create_document_records(successful_uploads)
+        documents = self.uploader.__create_document_records(successful_uploads)
 
         self.assertEqual(len(documents), 1)
         self.assertEqual(self.session.query(Documents).count(), 1)
@@ -99,12 +99,12 @@ class TestPDFUploader(unittest.TestCase):
         if documents[0] is None:
             base_dir = Path(__file__).resolve().parent
             successful_uploads = [base_dir / "pdf-test" / "test1.pdf"]
-            documents = self.uploader.create_document_records(successful_uploads)
+            documents = self.uploader.__create_document_records(successful_uploads)
 
         self.session.add_all(documents)
         self.session.commit()
 
-        provenance = self.uploader.create_provenance_record(documents, "Test comment")
+        provenance = self.uploader.__create_provenance_record(documents, "Test comment")
 
         self.assertIsInstance(provenance, Provenance)
         self.assertEqual(self.session.query(Provenance).count(), 1)
@@ -114,7 +114,7 @@ class TestPDFUploader(unittest.TestCase):
         if document is None:
             base_dir = Path(__file__).resolve().parent
             successful_uploads = [base_dir / "pdf-test" / "test1.pdf"]
-            documents = self.uploader.create_document_records(successful_uploads)
+            documents = self.uploader.__create_document_records(successful_uploads)
             document = documents[0]
 
         provenance = Provenance(
