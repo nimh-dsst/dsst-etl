@@ -16,7 +16,7 @@ fi
 
 # Run alembic check
 echo "Running alembic check..."
-alembic upgrade head
+alembic upgrade heads
 alembic check
 
 # Store the exit code
