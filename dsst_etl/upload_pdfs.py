@@ -1,16 +1,20 @@
+import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import boto3
-import psycopg2
 import sqlalchemy
 
 from dsst_etl import __version__, get_db_engine, logger
-from dsst_etl._utils import get_bucket_name, get_compute_context_id
-from dsst_etl.db import get_db_session
-from dsst_etl.models import Documents, Provenance, Works
+from dsst_etl._utils import (
+    convert_metadata_to_identifier,
+    get_bucket_name,
+    get_compute_context_id,
+)
+from dsst_etl.models import Documents, Identifier, Provenance, Works
 
 from .config import config
 
@@ -37,81 +41,29 @@ class PDFUploader:
         self.s3_client = boto3.client("s3")
         self.db_session = db_session
 
-    def upload_pdfs(self, pdf_paths: List[str]) -> Tuple[List[str], List[str]]:
+    def __upload_pdf_file_to_s3(self, pdf_path: str) -> bool:
         """
-        Upload multiple PDFs to S3 bucket.
+        Upload a single PDF file to S3.
 
         Args:
-            pdf_paths (List[str]): List of paths to PDF files
+            pdf_path (str): Path to the PDF file
 
         Returns:
-            Tuple[List[str], List[str]]: Lists of successful and failed uploads
+            string: S3 URI of the uploaded file
         """
-        successful_uploads = []
-        failed_uploads = []
-
-        for pdf_path in pdf_paths:
-            try:
-                logger.info(f"Uploading {pdf_path} to S3")
-
-                # Generate S3 key (path in bucket)
-                s3_key = f"pdfs/{os.path.basename(pdf_path)}"
-                # Upload file to S3
-                self.s3_client.upload_file(pdf_path, self.bucket_name, s3_key)
-                successful_uploads.append(pdf_path)
-                logger.info(f"Successfully uploaded {pdf_path} to S3")
-            except Exception as e:
-                logger.error(f"Failed to upload {pdf_path}: {str(e)}")
-                failed_uploads.append(pdf_path)
-
-        return successful_uploads, failed_uploads
-
-    def create_document_records(self, successful_uploads: List[str]) -> List[Documents]:
-        """
-        Create document records for successfully uploaded PDFs.
-
-        Args:
-            successful_uploads (List[str]): List of successfully uploaded PDF paths
-
-        Returns:
-            List[Document]: List of created document records
-        """
-        documents = []
-
-        for pdf_path in successful_uploads:
+        try:
             s3_key = f"pdfs/{os.path.basename(pdf_path)}"
+            self.s3_client.upload_file(pdf_path, self.bucket_name, s3_key)
+            return s3_key
+        except Exception as e:
+            logger.error(f"Failed to upload {pdf_path}: {e}")
+            return None
 
-            pdf_path = Path(pdf_path)
-            file_content = pdf_path.read_bytes()
-
-            hash_data = hashlib.md5(file_content).hexdigest()
-
-            document = Documents(
-                hash_data=hash_data,
-                s3uri=f"s3://{self.bucket_name}/{s3_key}",
-            )
-
-            try:
-                self.db_session.add(document)
-                self.db_session.commit()
-                documents.append(document)
-            except (psycopg2.errors.UniqueViolation, sqlalchemy.exc.IntegrityError):
-                self.db_session.rollback()
-                logger.warning(
-                    f"Document with hash {hash_data} already exists. Skipping."
-                )
-
-        logger.info(f"Created {len(documents)} document records")
-        return documents
-
-    def create_provenance_record(
-        self, documents: List[Documents], comment: str = None
-    ) -> Provenance:
+    def __create_provenance_record(self, comment: str = None) -> Provenance:
         """
         Create a provenance record for the upload batch and link it to documents.
 
         Args:
-            documents (List[Document]): List of document records
             comment (str): Comment about the upload batch
 
         Returns:
@@ -128,84 +80,143 @@ class PDFUploader:
         self.db_session.add(provenance)
         self.db_session.flush()
 
-        # Link provenance ID to documents
-        for document in documents:
-            document.provenance_id = provenance.id
-
         self.db_session.commit()
-        logger.info(
-            f"Created provenance record and linked to {len(documents)} documents"
-        )
+        logger.info(f"Created provenance record {provenance.id}")
         return provenance
 
-    def initial_work_for_document(
-        self, document: Documents, provenance: Provenance
-    ) -> Works:
-        work = Works(
-            initial_document_id=document.id,
-            primary_document_id=document.id,
-            provenance_id=provenance.id,
-        )
-        self.db_session.add(work)
-        self.db_session.commit()
-
-        document.work_id = work.id
-        self.db_session.commit()
-        return work
-
-    def link_documents_to_work(self, document_ids: List[int], work_id: int) -> None:
+    def __upload_pdfs_with_metadata(
+        self,
+        pdf_paths: List[str],
+        metadata: dict,
+        is_pmids: bool = False,
+        provenance_comment: str = None,
+    ) -> Tuple[List[str], List[str]]:
         """
-        Link existing documents to a work ID.
+        Upload PDFs to S3 and create identifier records based on metadata.
 
         Args:
-            document_ids (List[int]): List of document IDs to update
-            work_id (int): Work ID to link documents to
+            pdf_paths (List[str]): List of paths to PDF files
+            metadata (dict): Metadata for each PDF file
+
+        Returns:
+            Tuple[List[str], List[str]]: Lists of successful and failed uploads
         """
-        for doc_id in document_ids:
-            document = self.db_session.get(Documents, doc_id)
-            if document:
-                document.work_id = work_id
+        transformed_metadata = convert_metadata_to_identifier(metadata)
+        provenance = self.__create_provenance_record(provenance_comment)
+        failed_uploads = []
+        susccessful_uploads = []
 
-        self.db_session.commit()
-        logger.info(f"Linked {len(document_ids)} documents to work_id {work_id}")
+        for pdf_path in pdf_paths:
+            # Upload the file to S3
+            doc_uri = self.__upload_pdf_file_to_s3(pdf_path)
+            if not doc_uri:
+                failed_uploads.append(pdf_path)
+                continue
+
+            pdf_path = Path(pdf_path)
+            file_content = pdf_path.read_bytes()
+            hash_data = hashlib.md5(file_content).hexdigest()
+
+            document = Documents(
+                hash_data=hash_data,
+                s3uri=f"s3://{self.bucket_name}/{doc_uri}",
+                provenance_id=provenance.id,
+            )
+
+            # Add the document to the session and flush to get the ID
+            self.db_session.add(document)
+            self.db_session.flush()
+
+            # Add work for document
+            work = Works(
+                initial_document_id=document.id,
+                primary_document_id=document.id,
+                provenance_id=provenance.id,
+            )
+            self.db_session.add(work)
+
+            file_metadata = transformed_metadata.get(pdf_path.name, {})
+            if file_metadata or is_pmids:
+                identifier = Identifier(
+                    document_id=document.id,
+                    provenance_id=provenance.id,
+                    pmid=file_metadata.get("PMID"),
+                    doi=file_metadata.get("DOI"),
+                    pmcid=file_metadata.get("PMCID"),
+                )
+                self.db_session.add(identifier)
+
+            self.db_session.commit()
+
+            susccessful_uploads.append(pdf_path)
+
+        return susccessful_uploads, failed_uploads
+
+    def run_uploader(
+        self,
+        pdf_directory_path: str,
+        metadata_json_file_path: Optional[str],
+        is_pmids: Optional[bool] = False,
+        comment: Optional[str] = None,
+    ) -> Tuple[List[str], List[str]]:
+        """
+        Upload PDFs to S3 and create document records in the database.
+
+        Args:
+            pdf_paths (List[str]): List of paths to PDF files
+            metadata (dict): Metadata for each PDF file
+
+        Returns:
+            Tuple[List[str], List[str]]: Lists of successful and failed uploads
+        """
+        pdf_directory = Path(pdf_directory_path)
+        pdf_files = list(pdf_directory.glob("*.pdf"))
+
+        if not pdf_files:
+            logger.warning(f"No PDF files found in {pdf_directory_path}")
+            return [], []
+
+        with open(metadata_json_file_path) as f:
+            metadata = json.load(f)
+
+        return self.__upload_pdfs_with_metadata(pdf_files, metadata, is_pmids, comment)
 
 
-def upload_directory(pdf_directory_path: str, comment: Optional[str] = None) -> None:
-    """
-    Upload all PDFs from a directory to S3 and create necessary database records.
+def main():
+    parser = argparse.ArgumentParser(
+        description="Upload PDFs to S3 and create document records in the database."
+    )
+    parser.add_argument(
+        "pdf_directory_path",
+        type=str,
+        help="Path to the directory containing PDF files",
+    )
+    parser.add_argument(
+        "metadata_json_file_path",
+        type=str,
+        help="Path to the JSON file containing metadata",
+    )
+    parser.add_argument(
+        "--is_pmids", action="store_true", help="Flag to indicate if PMIDs are used"
+    )
+    parser.add_argument(
+        "--comment", type=str, help="Comment about the upload batch", default=None
+    )
 
-    Args:
-        pdf_directory_path (str): Path to directory containing PDFs
-        comment (Optional[str]): Comment for provenance record
-    """
-    # Convert string path to Path object
-    pdf_directory = Path(pdf_directory_path)
+    args = parser.parse_args()
 
-    # Get list of PDF files using glob
-    # pdf_files = [str(pdf_file) for pdf_file in pdf_directory.glob("*.pdf")]
-    pdf_files = list(pdf_directory.glob("*.pdf"))
+    # Initialize PDFUploader with appropriate db_session and bucket_name
+    uploader = PDFUploader(get_db_engine())
+    successful_uploads, failed_uploads = uploader.run_uploader(
+        args.pdf_directory_path,
+        args.metadata_json_file_path,
+        args.is_pmids,
+        args.comment,
+    )
 
-    if not pdf_files:
-        logger.warning(f"No PDF files found in {pdf_directory_path}")
-        return
-    uploader = PDFUploader(get_db_session(get_db_engine()))
+    logger.info("Successful uploads: %s", successful_uploads)
+    logger.info("Failed uploads: %s", failed_uploads)
 
-    # Upload PDFs
-    successful_uploads, failed_uploads = uploader.upload_pdfs(pdf_files)
 
-    if failed_uploads:
-        logger.warning(f"Failed to upload {len(failed_uploads)} files")
-
-    if successful_uploads:
-        # Create document records
-        documents = uploader.create_document_records(successful_uploads)
-
-        if not documents:
-            logger.warning("No documents created")
-            return
-
-        # Create provenance record
-        provenance = uploader.create_provenance_record(documents, comment)
-
-        for document in documents:
-            uploader.initial_work_for_document(document, provenance)
+if __name__ == "__main__":
+    main()
