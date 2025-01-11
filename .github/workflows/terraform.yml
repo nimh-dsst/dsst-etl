@@ -1,14 +1,7 @@
 name: Terraform
 
 on:
-  push:
-    branches:
-      - main
-      - terraform-sharing-db
-  pull_request:
-    branches:
-      - main
-      - terraform-sharing-db
+  workflow_dispatch:
 
 jobs:
   terraform:
@@ -19,6 +12,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-shared
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
@@ -26,13 +25,12 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-        working-directory: ./terraform/state
+        working-directory: ./terraform/postgres
 
       - name: Terraform Plan
         run: terraform plan
         working-directory: ./terraform/state
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/terraform-sharing-db'
         run: terraform apply -auto-approve
         working-directory: ./terraform/state
