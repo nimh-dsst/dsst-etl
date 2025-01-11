@@ -1,7 +1,14 @@
 name: Terraform
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - terraform-sharing-db
+  pull_request:
+    branches:
+      - main
+      - terraform-sharing-db
 
 jobs:
   terraform:
