@@ -1,0 +1,54 @@
+name: Terraform
+
+on:
+  push:
+    branches:
+      - main
+      - terraform-sharing-db
+  pull_request:
+    branches:
+      - main
+      - terraform-sharing-db
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Debug GitHub Context
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Workflow: ${{ github.workflow }}"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-etl
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.0.0
+  
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/postgres
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: terraform/postgres
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: terraform/postgres
