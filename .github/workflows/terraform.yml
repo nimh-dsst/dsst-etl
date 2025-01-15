@@ -48,3 +48,19 @@ jobs:
       - name: Verify Identity
         run: |
           aws sts get-caller-identity
+          - name: Set up Terraform
+          uses: hashicorp/setup-terraform@v2
+          with:
+            terraform_version: 1.0.0
+  
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform/postgres
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: ./terraform/postgres
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./terraform/postgres
