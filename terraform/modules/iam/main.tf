@@ -47,7 +47,7 @@ resource "aws_iam_policy" "cd" {
 }
 
 resource "aws_iam_role" "cd" {
-  name = "${var.cd_iam_role_policy_name}-dsst-${var.environment}"
+  name = "github-actions-role-etl"
   assume_role_policy = templatefile("${path.module}/policies/assume-role.json.tftpl",
     {
       AWS_ACCOUNT_ID = var.AWS_ACCOUNT_ID
