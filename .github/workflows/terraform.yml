@@ -27,6 +27,8 @@ jobs:
         with:
           aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-shared
+          audience: sts.amazonaws.com
+          role-duration-seconds: 900
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
