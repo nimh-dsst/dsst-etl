@@ -26,18 +26,6 @@ jobs:
           echo "SHA: ${{ github.sha }}"
           echo "Workflow: ${{ github.workflow }}"
 
-      - name: Get OIDC Token
-        id: get_token
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          TOKEN_RESPONSE=$(curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-          echo "OIDC Token Response: $TOKEN_RESPONSE"
-          echo "$TOKEN_RESPONSE" | jq .
-        env:
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -45,13 +33,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           audience: sts.amazonaws.com
 
-      - name: Verify Identity
-        run: |
-          aws sts get-caller-identity
-          - name: Set up Terraform
-          uses: hashicorp/setup-terraform@v2
-          with:
-            terraform_version: 1.0.0
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.0.0
   
       - name: Terraform Init
         run: terraform init
