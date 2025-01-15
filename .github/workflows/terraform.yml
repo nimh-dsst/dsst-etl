@@ -23,32 +23,18 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "Actor: ${{ github.actor }}"
           echo "Ref: ${{ github.ref }}"
-          echo "Event Name: ${{ github.event_name }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Workflow: ${{ github.workflow }}"
 
-      - name: Get OIDC Token Details
+      - name: Get OIDC Token
         id: get_token
         run: |
-          # Get the token and extract claims
-          TOKEN_RESPONSE=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-          echo "Full Response:"
-          echo "$TOKEN_RESPONSE" | jq '.'
-          
-          # Try to extract specific claims if they exist
-          echo "Attempting to extract sub claim:"
-          echo "$TOKEN_RESPONSE" | jq -r '.sub // empty'
-          
-          echo "Attempting to extract aud claim:"
-          echo "$TOKEN_RESPONSE" | jq -r '.aud // empty'
+          TOKEN_RESPONSE=$(curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
+          echo "OIDC Token Response: $TOKEN_RESPONSE"
+          echo "$TOKEN_RESPONSE" | jq .
         env:
           ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
           ACTIONS_ID_TOKEN_REQUEST_URL: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}
-
-      - name: Verify AWS Role
-        run: |
-          echo "Attempting to assume role: ${{ env.AWS_ROLE_ARN }}"
-          echo "Using audience: sts.amazonaws.com"
-        env:
-          AWS_ROLE_ARN: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-shared
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -56,3 +42,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role-shared
           aws-region: ${{ secrets.AWS_REGION }}
           audience: sts.amazonaws.com
+
+      - name: Verify Identity
+        run: |
+          aws sts get-caller-identity
