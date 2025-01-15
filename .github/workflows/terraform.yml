@@ -30,6 +30,19 @@ jobs:
           audience: sts.amazonaws.com
           role-duration-seconds: 900
 
+      - name: Verify AWS Credentials
+        run: |
+          aws sts get-caller-identity
+
+      - name: Debug Info
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub Repository: ${{ github.repository }}"
+          echo "GitHub Actor: ${{ github.actor }}"
+    
+      
+      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
