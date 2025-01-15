@@ -40,12 +40,12 @@ jobs:
   
       - name: Terraform Init
         run: terraform init
-        working-directory: ./terraform/postgres
+        working-directory: terraform/postgres
 
       - name: Terraform Plan
         run: terraform plan
-        working-directory: ./terraform/postgres
+        working-directory: terraform/postgres
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: ./terraform/postgres
+        working-directory: terraform/postgres
