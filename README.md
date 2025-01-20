@@ -185,6 +185,35 @@ This project uses Alembic for database migrations. Follow the steps below to gen
 
 5. **Verify the Database**: Check your database to ensure that the schema has been updated as expected.
 
+
+## Database Maintenance
+
+The shared database is deployed using Opentofu (see the terraform directory).
+
+A connection example (adding db password and address as required):
+
+```
+PGPASSWORD=### psql -h ### -U postgres -d dsst_etl -c "\l"
+```
+
+To list snapshots:
+```
+aws rds describe-db-snapshots --db-instance-identifier dsst-etl-postgres-prod --query 'DBSnapshots[*].{SnapshotId:DBSnapshotIdentifier,SnapshotType:SnapshotType,Status:Status,Created:SnapshotCreateTime}'
+```
+
+To manually create a snapshot:
+```
+aws rds create-db-snapshot \
+    --db-instance-identifier dsst-etl-postgres-prod \
+    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
+```
+
+To delete a snapshot:
+```
+aws rds delete-db-snapshot \
+    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
+```
+
 ### Troubleshooting
 
 - If you encounter any issues, ensure that your database connection settings in the `.env` file are correct.
