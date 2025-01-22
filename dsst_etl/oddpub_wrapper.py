@@ -1,12 +1,10 @@
-import hashlib
 import logging
 from pathlib import Path
 
-import boto3
 import requests
 from sqlalchemy.orm import Session
 
-from dsst_etl.models import Documents, OddpubMetrics, Provenance, Works
+from dsst_etl.models import OddpubMetrics
 
 from .config import config
 
@@ -99,87 +97,4 @@ class OddpubWrapper:
 
         except Exception as e:
             logger.error(f"Error in PDF processing workflow: {str(e)}")
-            self.db_session.rollback()
-
-    def process_s3_inventory(self, s3_bucket: str, inventory_prefix: str):
-        """
-        Process S3 inventory to sync with the database and generate Oddpub metrics.
-
-        Args:
-            s3_bucket (str): Name of the S3 bucket
-            inventory_prefix (str): Prefix of the inventory files in the S3 bucket
-        """
-        try:
-            s3_client = boto3.client("s3")
-            paginator = s3_client.get_paginator("list_objects_v2")
-            page_iterator = paginator.paginate(
-                Bucket=s3_bucket, Prefix=inventory_prefix
-            )
-
-            existing_hashes = {
-                doc.hash_data
-                for doc in self.db_session.query(Documents.hash_data).all()
-            }
-            s3_hashes = set()
-
-            for page in page_iterator:
-                for obj in page.get("Contents", []):
-                    key = obj["Key"]
-                    if key.endswith(".pdf"):
-                        response = s3_client.get_object(Bucket=s3_bucket, Key=key)
-                        file_content = response["Body"].read()
-                        file_hash = hashlib.sha256(file_content).hexdigest()
-                        s3_hashes.add(file_hash)
-
-                        if file_hash not in existing_hashes:
-                            # Create new document entry
-                            document = Documents(
-                                hash_data=file_hash, s3uri=f"s3://{s3_bucket}/{key}"
-                            )
-                            self.db_session.add(document)
-                            self.db_session.commit()
-
-                            # Create new work entry
-                            work = Works(
-                                initial_document_id=document.id,
-                                primary_document_id=document.id,
-                            )
-                            self.db_session.add(work)
-                            self.db_session.commit()
-
-                            # Create new provenance entry
-                            provenance = Provenance(
-                                pipeline_name="S3 Inventory Sync", version="1.0"
-                            )
-                            self.db_session.add(provenance)
-                            self.db_session.commit()
-
-                            # Update work and document with provenance_id
-                            work.provenance_id = provenance.id
-                            document.provenance_id = provenance.id
-                            self.db_session.commit()
-
-                            # Run Oddpub analysis
-                            self.work_id = work.id
-                            self.document_id = document.id
-                            self.process_pdfs(
-                                pdf_folder=f"s3://{s3_bucket}/{key}", force_upload=True
-                            )
-
-            # Remove documents not in S3
-            missing_hashes = existing_hashes - s3_hashes
-            for missing_hash in missing_hashes:
-                document = (
-                    self.db_session.query(Documents)
-                    .filter_by(hash_data=missing_hash)
-                    .first()
-                )
-                if document:
-                    self.db_session.delete(document)
-                    self.db_session.commit()
-
-            logger.info("S3 inventory processing completed successfully")
-
-        except Exception as e:
-            logger.error(f"Error processing S3 inventory: {str(e)}")
             self.db_session.rollback()
