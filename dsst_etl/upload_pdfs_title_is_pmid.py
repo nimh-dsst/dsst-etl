@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 
 import boto3
@@ -111,3 +112,39 @@ class UploadPDFsTitleIsPMID:
             self.db_session.flush()
         except Exception as e:
             logger.error(f"Error running Oddpub analysis: {str(e)}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Upload PDFs to S3 where the title is the PMID."
+    )
+
+    parser.add_argument(
+        "--db-url",
+        required=True,
+        help="The database connection URL. This should be a valid SQLAlchemy database URL.",
+    )
+    parser.add_argument(
+        "--pdf-path",
+        required=True,
+        help="The path to the PDF file to upload. This should be a valid file path on your system.",
+    )
+
+    args = parser.parse_args()
+
+    # Set up the database session
+    engine = sqlalchemy.create_engine(args.db_url)
+    Session = sqlalchemy.orm.sessionmaker(bind=engine)
+    db_session = Session()
+
+    try:
+        uploader = UploadPDFsTitleIsPMID(db_session)
+        uploader.process_s3_inventory(args.pdf_path)
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+    finally:
+        db_session.close()
+
+
+if __name__ == "__main__":
+    main()
