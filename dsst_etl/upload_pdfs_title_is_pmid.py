@@ -1,11 +1,12 @@
 import hashlib
 
 import boto3
+import requests
 import sqlalchemy
 
 from dsst_etl import __version__, get_compute_context_id, logger
 from dsst_etl._utils import get_bucket_name
-from dsst_etl.models import Documents, Identifier, Provenance, Works
+from dsst_etl.models import Documents, Identifier, OddpubMetrics, Provenance, Works
 
 from .config import config
 
@@ -65,18 +66,15 @@ class UploadPDFsTitleIsPMID:
             if not key.endswith(".pdf"):
                 continue
 
-            file_hash = self._get_file_hash(key)
+            response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
+            file_content = response["Body"].read()
+            file_hash = hashlib.sha256(file_content).hexdigest()
             if file_hash in existing_hashes:
                 continue
 
-            self._create_document_entries(key, file_hash, provenance)
+            self._create_document_entries(key, file_content, file_hash, provenance)
 
-    def _get_file_hash(self, key):
-        response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
-        file_content = response["Body"].read()
-        return hashlib.sha256(file_content).hexdigest()
-
-    def _create_document_entries(self, key, file_hash, provenance):
+    def _create_document_entries(self, key, file_content, file_hash, provenance):
         document = Documents(
             hash_data=file_hash,
             s3uri=f"s3://{self.bucket_name}/{key}",
@@ -90,13 +88,26 @@ class UploadPDFsTitleIsPMID:
             provenance_id=provenance.id,
         )
         self.db_session.add(work)
-
         identifier = Identifier(
             pmid=key.split("/")[-1].split(".")[0],
             document_id=document.id,
             provenance_id=provenance.id,
         )
         self.db_session.add(identifier)
+        self.db_session.flush()
 
         # Run Oddpub analysis
-        # TODO: Add OddpubWrapper here
+        try:
+            response = requests.post(
+                f"{self.oddpub_host_api}/oddpub", files={"file": file_content}
+            )
+            response.raise_for_status()
+            r_result = response.json()
+            oddpub_metrics = OddpubMetrics(**r_result)
+            oddpub_metrics.work_id = work.id
+            oddpub_metrics.document_id = document.id
+            oddpub_metrics.provenance_id = provenance.id
+            self.db_session.add(oddpub_metrics)
+            self.db_session.flush()
+        except Exception as e:
+            logger.error(f"Error running Oddpub analysis: {str(e)}")
