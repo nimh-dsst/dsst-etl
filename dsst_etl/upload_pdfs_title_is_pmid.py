@@ -5,8 +5,8 @@ import boto3
 import requests
 import sqlalchemy
 
-from dsst_etl import __version__, get_compute_context_id, logger
-from dsst_etl._utils import get_bucket_name
+from dsst_etl import __version__, logger
+from dsst_etl._utils import get_bucket_name, get_compute_context_id
 from dsst_etl.models import Documents, Identifier, OddpubMetrics, Provenance, Works
 
 from .config import config
