@@ -17,10 +17,15 @@ class UploadPDFsTitleIsPMID:
     Uploads PDFs to S3 where the title is the PMID.
     """
 
-    def __init__(self, db_session: sqlalchemy.orm.Session):
+    def __init__(
+        self,
+        db_session: sqlalchemy.orm.Session,
+        oddpub_host_api: str = config.ODDPUB_HOST_API,
+    ):
         self.db_session = db_session
         self.bucket_name = get_bucket_name()
         self.s3_client = boto3.client("s3")
+        self.oddpub_host_api = oddpub_host_api
 
     def process_s3_inventory(self, pdf_path: str) -> str:
         """
@@ -58,7 +63,7 @@ class UploadPDFsTitleIsPMID:
             comment="Upload PDFs where the title is the PMID",
         )
         self.db_session.add(provenance)
-        self.db_session.flush()
+        self.db_session.commit()
         return provenance
 
     def _process_page(self, page, existing_hashes, provenance):
@@ -69,33 +74,41 @@ class UploadPDFsTitleIsPMID:
 
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             file_content = response["Body"].read()
-            file_hash = hashlib.sha256(file_content).hexdigest()
+            try:
+                file_hash = hashlib.sha256(file_content).hexdigest()
+            except Exception as e:
+                logger.error(f"Error hashing file: {str(e)}")
+                continue
             if file_hash in existing_hashes:
                 continue
 
             self._create_document_entries(key, file_content, file_hash, provenance)
 
     def _create_document_entries(self, key, file_content, file_hash, provenance):
-        document = Documents(
-            hash_data=file_hash,
-            s3uri=f"s3://{self.bucket_name}/{key}",
-            provenance_id=provenance.id,
-        )
-        self.db_session.add(document)
+        try:
+            document = Documents(
+                hash_data=file_hash,
+                s3uri=f"s3://{self.bucket_name}/{key}",
+                provenance_id=provenance.id,
+            )
+            self.db_session.add(document)
 
-        work = Works(
-            initial_document_id=document.id,
-            primary_document_id=document.id,
-            provenance_id=provenance.id,
-        )
-        self.db_session.add(work)
-        identifier = Identifier(
-            pmid=key.split("/")[-1].split(".")[0],
-            document_id=document.id,
-            provenance_id=provenance.id,
-        )
-        self.db_session.add(identifier)
-        self.db_session.flush()
+            work = Works(
+                initial_document_id=document.id,
+                primary_document_id=document.id,
+                provenance_id=provenance.id,
+            )
+            self.db_session.add(work)
+            self.db_session.commit()
+            identifier = Identifier(
+                pmid=key.split("/")[-1].split(".")[0],
+                document_id=document.id,
+                provenance_id=provenance.id,
+            )
+            self.db_session.add(identifier)
+            self.db_session.commit()
+        except Exception as e:
+            logger.error(f"Error creating document entries: {str(e)}")
 
         # Run Oddpub analysis
         try:
@@ -109,7 +122,7 @@ class UploadPDFsTitleIsPMID:
             oddpub_metrics.document_id = document.id
             oddpub_metrics.provenance_id = provenance.id
             self.db_session.add(oddpub_metrics)
-            self.db_session.flush()
+            self.db_session.commit()
         except Exception as e:
             logger.error(f"Error running Oddpub analysis: {str(e)}")
 

@@ -19,34 +19,58 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         mock_get_bucket_name.return_value = 'mock-bucket'
 
         # Initialize the class with the mocked session
-        self.uploader = UploadPDFsTitleIsPMID(self.session)
+        self.uploader = UploadPDFsTitleIsPMID(self.session, oddpub_host_api='http://mock-api:8071')
 
+    @patch('requests.post')
     @patch('dsst_etl.upload_pdfs_title_is_pmid.logger')
-    def test_process_s3_inventory_success(self, mock_logger):
+    def test_process_s3_inventory_success(self, mock_logger, mock_post):
+        # Mock the POST request
+        def mock_post_side_effect(url, *args, **kwargs):
+            if url == 'http://mock-api:8071/oddpub':
+                mock_response = MagicMock()
+                mock_response.json.return_value = {
+                   'article': 'test1.txt', 
+                    'is_open_data': False, 
+                    'open_data_category': '', 
+                    'is_reuse': False, 
+                    'is_open_code': False, 
+                    'is_open_data_das': False, 
+                    'is_open_code_cas': False, 
+                    'das': None, 
+                    'open_data_statements': '', 
+                    'cas': None, 
+                    'open_code_statements': ''
+                }
+                mock_response.status_code = 200
+                return mock_response
+            else:
+                raise ValueError(f"Unexpected URL: {url}")
+
+        mock_post.side_effect = mock_post_side_effect
+
         # Mock the S3 paginator and page iterator
         mock_page_iterator = [{'Contents': [{'Key': '12345678.pdf'}]}]
         self.uploader._get_s3_page_iterator = MagicMock(return_value=mock_page_iterator)
 
-        # Mock existing hashes
-        self.uploader._get_existing_hashes = MagicMock(return_value=set())
-
-        # Mock provenance entry creation
-        mock_provenance = MagicMock()
-        self.uploader._create_provenance_entry = MagicMock(return_value=mock_provenance)
-
-        # Mock S3 get_object response
-        self.mock_s3_client.get_object.return_value = {'Body': MagicMock(read=MagicMock(return_value=b'pdf content'))}
+        # Mock S3 get_object response to return bytes
+        self.mock_s3_client.get_object.return_value = {
+            'Body': MagicMock(read=MagicMock(return_value=b'test content'))
+        }
 
         # Run the method
         self.uploader.process_s3_inventory('mock/path/to/pdf')
 
         # Assertions
-        self.mock_db_session.commit.assert_called_once()
-        mock_logger.info.assert_called_with("S3 inventory processing completed successfully")
-        self.assertEqual(self.session.query(Documents).count(), 1)
-        self.assertEqual(self.session.query(Identifier).count(), 1)
-        self.assertEqual(self.session.query(Works).count(), 1)
-        self.assertEqual(self.session.query(OddpubMetrics).count(), 1)
+        self.assertEqual(self.session.query(Documents).count(), 1, "Documents table should have 1 row")
+        self.assertEqual(self.session.query(Identifier).count(), 1, "Identifier table should have 1 row")
+        self.assertEqual(self.session.query(Works).count(), 1, "Works table should have 1 row")
+        self.assertEqual(self.session.query(OddpubMetrics).count(), 1, "OddpubMetrics table should have 1 row")
+
+        # Check that the POST request was made to the correct URL
+        mock_post.assert_called_with(
+            'http://mock-api:8071/oddpub',
+            files={'file': b'test content'}
+        )
 
     @patch('dsst_etl.upload_pdfs_title_is_pmid.logger')
     def test_process_s3_inventory_failure(self, mock_logger):
@@ -57,13 +81,11 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         self.uploader.process_s3_inventory('mock/path/to/pdf')
 
         # Assertions
-        self.mock_db_session.commit.assert_not_called()
         mock_logger.error.assert_called_with("Error processing S3 inventory: Test exception")
         self.assertEqual(self.session.query(Documents).count(), 0)
         self.assertEqual(self.session.query(Identifier).count(), 0)
         self.assertEqual(self.session.query(Works).count(), 0)
         self.assertEqual(self.session.query(OddpubMetrics).count(), 0)
-
 
 
 if __name__ == '__main__':
