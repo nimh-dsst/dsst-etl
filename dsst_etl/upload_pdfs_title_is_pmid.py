@@ -27,10 +27,7 @@ class UploadPDFsTitleIsPMID:
         self.s3_client = boto3.client("s3")
         self.oddpub_host_api = oddpub_host_api
 
-    def process_s3_inventory(self, pdf_path: str) -> str:
-        """
-        Upload a single PDF file to S3.
-        """
+    def process_s3_bucket(self) -> str:
         try:
             page_iterator = self._get_s3_page_iterator()
             existing_hashes = self._get_existing_hashes()
@@ -152,7 +149,7 @@ def main():
 
     try:
         uploader = UploadPDFsTitleIsPMID(db_session)
-        uploader.process_s3_inventory(args.pdf_path)
+        uploader.process_s3_bucket()
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
     finally:
