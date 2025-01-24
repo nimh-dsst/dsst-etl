@@ -8,7 +8,7 @@ def main():
     
     try:
         uploader = UploadPDFsTitleIsPMID(db_session)
-        uploader.process_s3_bucket()
+        uploader.run()
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
     finally:

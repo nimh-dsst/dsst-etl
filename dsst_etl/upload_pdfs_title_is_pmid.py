@@ -26,7 +26,24 @@ class UploadPDFsTitleIsPMID:
         self.s3_client = boto3.client("s3")
         self.oddpub_host_api = oddpub_host_api
 
-    def process_s3_bucket(self) -> str:
+    def run(self) -> str:
+        """
+        Executes the process of reading PDFs in S3 bucket where the title of pdf files is the PMID.
+
+        This method performs the following steps:
+        1. Retrieves an iterator for paginated S3 objects.
+        2. Fetches existing document hashes from the database to avoid duplicates.
+        3. Creates a provenance entry for the current upload process.
+        4. Iterates over each page of S3 objects, processing each PDF file:
+        - Skips non-PDF files.
+        - Computes the hash of the PDF content.
+        - Checks for duplicate hashes.
+        - Creates document, work, and identifier entries in the database.
+        - Runs Oddpub analysis on the PDF content.
+        5. Commits the database session upon successful processing.
+        6. Logs the completion of the process or any errors encountered.
+        """
+
         try:
             page_iterator = self._get_s3_page_iterator()
             existing_hashes = self._get_existing_hashes()

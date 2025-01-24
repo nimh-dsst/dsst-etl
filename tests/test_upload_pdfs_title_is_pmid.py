@@ -58,7 +58,7 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         }
 
         # Run the method
-        self.uploader.process_s3_bucket('mock/path/to/pdf')
+        self.uploader.run()
 
         # Assertions
         self.assertEqual(self.session.query(Documents).count(), 1, "Documents table should have 1 row")
@@ -78,7 +78,7 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         self.uploader._get_s3_page_iterator = MagicMock(side_effect=Exception("Test exception"))
 
         # Run the method
-        self.uploader.process_s3_bucket('mock/path/to/pdf')
+        self.uploader.run('mock/path/to/pdf')
 
         # Assertions
         mock_logger.error.assert_called_with("Error processing S3 inventory: Test exception")
