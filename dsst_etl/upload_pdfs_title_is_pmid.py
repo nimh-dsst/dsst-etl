@@ -62,7 +62,7 @@ class UploadPDFsTitleIsPMID:
     def _create_provenance_entry(self):
         # Creates a provenance entry to track the current upload process
         provenance = Provenance(
-            pipeline_name="Document Upload",
+            pipeline_name="Oddpub Analysis",
             version=__version__,
             compute=get_compute_context_id(),
             personnel=config.HOSTNAME,
