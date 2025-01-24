@@ -98,6 +98,8 @@ class UploadPDFsTitleIsPMID:
             except SQLAlchemyError as e:
                 logger.error(f"Transaction failed for document {key}: {str(e)}")
                 self.db_session.rollback()
+                # Move to next document
+                continue
 
     def _create_document_entries(self, key, file_content, file_hash, provenance):
         # Creates database entries for the document, work, and identifier
@@ -130,18 +132,31 @@ class UploadPDFsTitleIsPMID:
             raise  # Re-raise to trigger rollback
 
         # Run Oddpub analysis
+        self._run_oddpub_analysis(key, file_content, work, document, provenance)
+
+    def _run_oddpub_analysis(self, key, file_content, work, document, provenance):
+        """
+        Runs the Oddpub analysis and saves the results to the database.
+        """
         try:
             response = requests.post(
                 f"{self.oddpub_host_api}/oddpub", files={"file": file_content}
             )
             response.raise_for_status()
             r_result = response.json()
+        except Exception as e:
+            logger.error(f"Error running Oddpub analysis: {str(e)}")
+            return None
+
+        try:
             oddpub_metrics = OddpubMetrics(**r_result)
             oddpub_metrics.work_id = work.id
             oddpub_metrics.document_id = document.id
             oddpub_metrics.provenance_id = provenance.id
             self.db_session.add(oddpub_metrics)
             self.db_session.commit()
+            return oddpub_metrics
         except Exception as e:
-            logger.error(f"Error running Oddpub analysis: {str(e)}")
-            raise  # Re-raise to trigger rollback
+            logger.error(f"Error saving Oddpub analysis: {str(e)}")
+            # Raise to trigger rollback
+            raise e
