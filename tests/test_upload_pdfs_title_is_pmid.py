@@ -22,8 +22,7 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         self.uploader = UploadPDFsTitleIsPMID(self.session, oddpub_host_api='http://mock-api:8071')
 
     @patch('requests.post')
-    @patch('dsst_etl.upload_pdfs_title_is_pmid.logger')
-    def test_process_s3_inventory_success(self, mock_logger, mock_post):
+    def test_process_s3_inventory_success(self, mock_post):
         # Mock the POST request
         def mock_post_side_effect(url, *args, **kwargs):
             if url == 'http://mock-api:8071/oddpub':
@@ -50,7 +49,7 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
 
         # Mock the S3 paginator and page iterator
         mock_page_iterator = [{'Contents': [{'Key': '12345678.pdf'}]}]
-        self.uploader._get_s3_page_iterator = MagicMock(return_value=mock_page_iterator)
+        self.uploader._get_s3_pdf_iterator = MagicMock(return_value=mock_page_iterator)
 
         # Mock S3 get_object response to return bytes
         self.mock_s3_client.get_object.return_value = {

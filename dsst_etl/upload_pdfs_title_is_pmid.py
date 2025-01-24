@@ -42,14 +42,12 @@ class UploadPDFsTitleIsPMID:
         4. Commits the database session upon successful processing.
         5. Logs the completion of the process or any errors encountered.
         """
-
         try:
             pdf_iterator = self._get_s3_pdf_iterator()
             provenance = self._create_provenance_entry()
 
             for pdf_batch in pdf_iterator:
                 self._process_pdf_batch(pdf_batch, provenance)
-
             self.db_session.commit()
             logger.info("S3 inventory processing completed successfully")
 
@@ -80,6 +78,7 @@ class UploadPDFsTitleIsPMID:
             key = obj["Key"]
             if not key.endswith(".pdf"):
                 continue
+            logger.info(f"processing key: {key}")
 
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             file_content = response["Body"].read()
@@ -109,6 +108,7 @@ class UploadPDFsTitleIsPMID:
                 provenance_id=provenance.id,
             )
             self.db_session.add(document)
+            self.db_session.flush()
 
             work = Works(
                 initial_document_id=document.id,
@@ -116,14 +116,15 @@ class UploadPDFsTitleIsPMID:
                 provenance_id=provenance.id,
             )
             self.db_session.add(work)
-            self.db_session.commit()
+            self.db_session.flush()
+
             identifier = Identifier(
                 pmid=key.split("/")[-1].split(".")[0],
                 document_id=document.id,
                 provenance_id=provenance.id,
             )
             self.db_session.add(identifier)
-            self.db_session.commit()
+            self.db_session.flush()
         except SQLAlchemyError as e:
             logger.error(f"Error creating document entries: {str(e)}")
             raise  # Re-raise to trigger rollback
