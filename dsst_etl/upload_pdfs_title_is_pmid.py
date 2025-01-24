@@ -32,25 +32,22 @@ class UploadPDFsTitleIsPMID:
 
         This method performs the following steps:
         1. Retrieves an iterator for paginated S3 objects.
-        2. Fetches existing document hashes from the database to avoid duplicates.
-        3. Creates a provenance entry for the current upload process.
-        4. Iterates over each page of S3 objects, processing each PDF file:
+        2. Creates a provenance entry for the current upload process.
+        3. Iterates over each page of S3 objects, processing each PDF file:
         - Skips non-PDF files.
         - Computes the hash of the PDF content.
-        - Checks for duplicate hashes.
         - Creates document, work, and identifier entries in the database.
         - Runs Oddpub analysis on the PDF content.
-        5. Commits the database session upon successful processing.
-        6. Logs the completion of the process or any errors encountered.
+        4. Commits the database session upon successful processing.
+        5. Logs the completion of the process or any errors encountered.
         """
 
         try:
-            page_iterator = self._get_s3_page_iterator()
-            existing_hashes = self._get_existing_hashes()
+            pdf_iterator = self._get_s3_pdf_iterator()
             provenance = self._create_provenance_entry()
 
-            for page in page_iterator:
-                self._process_page(page, existing_hashes, provenance)
+            for pdf_batch in pdf_iterator:
+                self._process_pdf_batch(pdf_batch, provenance)
 
             self.db_session.commit()
             logger.info("S3 inventory processing completed successfully")
@@ -58,16 +55,13 @@ class UploadPDFsTitleIsPMID:
         except Exception as e:
             logger.error(f"Error processing S3 inventory: {str(e)}")
 
-    def _get_s3_page_iterator(self):
+    def _get_s3_pdf_iterator(self):
+        # Retrieves a paginator for S3 objects, allowing iteration over batches of objects
         paginator = self.s3_client.get_paginator("list_objects_v2")
         return paginator.paginate(Bucket=self.bucket_name)
 
-    def _get_existing_hashes(self):
-        return {
-            doc.hash_data for doc in self.db_session.query(Documents.hash_data).all()
-        }
-
     def _create_provenance_entry(self):
+        # Creates a provenance entry to track the current upload process
         provenance = Provenance(
             pipeline_name="Document Upload",
             version=__version__,
@@ -79,25 +73,26 @@ class UploadPDFsTitleIsPMID:
         self.db_session.commit()
         return provenance
 
-    def _process_page(self, page, existing_hashes, provenance):
-        for obj in page.get("Contents", []):
+    def _process_pdf_batch(self, pdf_batch, provenance):
+        # Processes each PDF file in the current batch
+        for obj in pdf_batch.get("Contents", []):
             key = obj["Key"]
             if not key.endswith(".pdf"):
                 continue
 
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             file_content = response["Body"].read()
+
             try:
                 file_hash = hashlib.sha256(file_content).hexdigest()
             except Exception as e:
                 logger.error(f"Error hashing file: {str(e)}")
                 continue
-            if file_hash in existing_hashes:
-                continue
 
             self._create_document_entries(key, file_content, file_hash, provenance)
 
     def _create_document_entries(self, key, file_content, file_hash, provenance):
+        # Creates database entries for the document, work, and identifier
         try:
             document = Documents(
                 hash_data=file_hash,
