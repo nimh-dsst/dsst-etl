@@ -3,6 +3,7 @@ import hashlib
 import boto3
 import requests
 import sqlalchemy
+from sqlalchemy.exc import SQLAlchemyError
 
 from dsst_etl import __version__, logger
 from dsst_etl._utils import get_bucket_name, get_compute_context_id
@@ -89,7 +90,15 @@ class UploadPDFsTitleIsPMID:
                 logger.error(f"Error hashing file: {str(e)}")
                 continue
 
-            self._create_document_entries(key, file_content, file_hash, provenance)
+            # Use a transaction context manager to ensure atomicity
+            try:
+                with self.db_session.begin_nested():
+                    self._create_document_entries(
+                        key, file_content, file_hash, provenance
+                    )
+            except SQLAlchemyError as e:
+                logger.error(f"Transaction failed for document {key}: {str(e)}")
+                self.db_session.rollback()
 
     def _create_document_entries(self, key, file_content, file_hash, provenance):
         # Creates database entries for the document, work, and identifier
@@ -115,8 +124,9 @@ class UploadPDFsTitleIsPMID:
             )
             self.db_session.add(identifier)
             self.db_session.commit()
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Error creating document entries: {str(e)}")
+            raise  # Re-raise to trigger rollback
 
         # Run Oddpub analysis
         try:
@@ -133,3 +143,4 @@ class UploadPDFsTitleIsPMID:
             self.db_session.commit()
         except Exception as e:
             logger.error(f"Error running Oddpub analysis: {str(e)}")
+            raise  # Re-raise to trigger rollback
