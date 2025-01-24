@@ -75,10 +75,10 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
     @patch('dsst_etl.upload_pdfs_title_is_pmid.logger')
     def test_process_s3_inventory_failure(self, mock_logger):
         # Force an exception in the process
-        self.uploader._get_s3_page_iterator = MagicMock(side_effect=Exception("Test exception"))
+        self.uploader._get_s3_pdf_iterator = MagicMock(side_effect=Exception("Test exception"))
 
         # Run the method
-        self.uploader.run('mock/path/to/pdf')
+        self.uploader.run()
 
         # Assertions
         mock_logger.error.assert_called_with("Error processing S3 inventory: Test exception")
