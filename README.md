@@ -1,4 +1,153 @@
-# Share Stats
+# DSST-ETL
+
+A collection of scripts for extracting, transforming, and loading data.
+
+## Development setup
+
+
+The following will allow you to run the scripts in this project:
+
+```
+#install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# install all dependencies
+uv sync --all-extras
+# copy the mock environment variables to the file used by docker compose and the package
+cp .mockenv .env
+# activate the virtual environment
+source .venv/bin/activate
+```
+
+The scripts will have different requirements for resource access (s3 buckets, Postgres DB, internet, APIs, etc.)
+
+Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker:
+
+```
+docker compose -f .docker/postgres-compose.yaml up -d
+```
+
+## Other development notes
+
+### Tidying the local database resources
+
+The following will remove the postgres container and its associated volume (the -v flag).
+```
+docker compose -f .docker/postgres-compose.yaml down -v
+```
+
+### Install the pre-commit hooks
+
+If you are developing locally you should make use of pre-commit hooks to ensure that your code is formatted correctly and passes linting checks.
+
+```
+pre-commit install
+# run the pre-commit hooks on all files
+   pre-commit run --all-files
+```
+
+
+### Run the tests
+
+You can run the test suite (assuming you have activated the virtual environment and set up required resources) with the following command:
+
+```
+pytest
+```
+
+### Database Setup
+
+To set up the database for this project, follow these steps:
+
+1. **Create the Database**: 
+   - If the database does not exist, you need to create it. This can be done using a database client or command line tool specific to your database system. For example, using PostgreSQL, you might run:
+     ```bash
+     createdb your_database_name
+     ```
+
+2. **Initialize the Database Schema**:
+   - Once the database is created, you need to apply the database schema using Alembic. Run the following command to apply all migrations:
+     ```bash
+     alembic upgrade head
+     ```
+
+   - This command will apply all pending migrations and set up the database schema as defined in your Alembic migration scripts.
+
+3. **Verify the Setup**:
+   - After running the migrations, verify that the database schema is correctly set up by checking the tables and their structures.
+
+
+### Database Migrations
+
+This project uses Alembic for database migrations. Follow the steps below to generate and apply migrations to the database.
+
+#### Prerequisites
+
+- Ensure your database is running. If you're using Docker, you can start the database with:
+  ```bash
+  docker-compose -f .docker/postgres-compose.yaml up -d
+  ```
+
+#### Running Migrations
+
+1. **Configure Alembic**: Ensure that the `alembic/env.py` file is correctly set up to connect to your database. The connection settings are managed through environment variables in your `.env` file.
+
+2. **Create a New Migration**: To create a new migration script, run the following command:
+   ```bash
+   alembic revision --autogenerate -m "Description of changes"
+   ```
+
+   This will generate a new migration script in the `alembic/versions` directory.
+
+3. **Review the Migration Script**: Open the generated migration script and review it to ensure it accurately reflects the changes you want to make to the database schema.
+
+4. **Apply the Migration**: To apply the migration to the database, run:
+   ```bash
+   alembic upgrade head
+   ```
+
+   This command will apply all pending migrations up to the latest one.
+
+5. **Verify the Database**: Check your database to ensure that the schema has been updated as expected.
+
+#### Troubleshooting
+
+- If you encounter any issues, ensure that your database connection settings in the `.env` file are correct.
+- Check the Alembic logs for any error messages that might indicate what went wrong.
+
+For more detailed information on using Alembic, refer to the [Alembic documentation](https://alembic.sqlalchemy.org/en/latest/).
+
+
+### Database Maintenance
+
+The shared database is deployed using Opentofu (see the terraform directory).
+
+A connection example (adding db password and address as required):
+
+```
+PGPASSWORD=<password> psql -h <host> -U postgres -d dsst_etl -c "\l"
+```
+
+To list snapshots:
+```
+aws rds describe-db-snapshots --db-instance-identifier dsst-etl-postgres-prod --query 'DBSnapshots[*].{SnapshotId:DBSnapshotIdentifier,SnapshotType:SnapshotType,Status:Status,Created:SnapshotCreateTime}'
+```
+
+To manually create a snapshot:
+```
+aws rds create-db-snapshot \
+    --db-instance-identifier dsst-etl-postgres-prod \
+    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
+```
+
+To delete a snapshot:
+```
+aws rds delete-db-snapshot \
+    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
+```
+
+
+
+# Script descriptions
 
 ## get_ipids.py
 
@@ -88,136 +237,4 @@ _ renv
 - [Open Data Detection in Publications (ODDPub)](https://github.com/quest-bih/oddpub). Required for [rtransparent](https://github.com/serghiou/rtransparent). *Must us v6.0!* If installing manually run `devtools::install_github("quest-bih/oddpub@v6")`. Updated ODDPub uses different parameters in latest version than is
 - [CrossRef Minter (crminer)](https://github.com/cran/crminer). Required for [metareadr](https://github.com/serghiou/metareadr)
 _ [Meta Reader (metareadr)](https://github.com/serghiou/metareadr). Required for [rtransparent](https://github.com/serghiou/rtransparent).
-
-## Python Dependencies
-
-### Pip-tools
-
-In order to separate the develepment dependencies and the required depedencies, this project uses pip-tools. For running the scripts run `pip install -r requirements`. To develop on the codebase with tools that help with formatting, typing, and linting run `pip install -r dev.txt`.
-
-### psycopg2
-
-The PYPI package `psycopg2-binary` is used in `requirements.in` for compatiblity with pip-tools. This version of psycopg2 is not for production uses of POSTGRESQL. See [psycopg2-binary docs](https://pypi.org/project/psycopg2-binary/) for an explanation.
-
-### DSST-ETL
-
-Some useful commands:
-
-```
-#install uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-# install all dependencies
-uv sync --all-extras
-# activate the virtual environment
-source .venv/bin/activate
-
-# copy the mock environment variables to the file used by docker compose and the package
-cp .mockenv .env
-
-# start the postgres server
-docker compose -f .docker/postgres-compose.yaml up -d
-
-# stop the postgres server and remove the volume with -v
-docker compose -f .docker/postgres-compose.yaml down -v
-
-# install the pre-commit hooks
-pre-commit install
-
-# run the pre-commit hooks on all files
-   pre-commit run --all-files
-
-# run the tests
-pytest
-```
-
-## Database Setup
-
-To set up the database for this project, follow these steps:
-
-1. **Create the Database**: 
-   - If the database does not exist, you need to create it. This can be done using a database client or command line tool specific to your database system. For example, using PostgreSQL, you might run:
-     ```bash
-     createdb your_database_name
-     ```
-
-2. **Initialize the Database Schema**:
-   - Once the database is created, you need to apply the database schema using Alembic. Run the following command to apply all migrations:
-     ```bash
-     alembic upgrade head
-     ```
-
-   - This command will apply all pending migrations and set up the database schema as defined in your Alembic migration scripts.
-
-3. **Verify the Setup**:
-   - After running the migrations, verify that the database schema is correctly set up by checking the tables and their structures.
-
-
-## Database Migrations
-
-This project uses Alembic for database migrations. Follow the steps below to generate and apply migrations to the database.
-
-### Prerequisites
-
-- Ensure your database is running. If you're using Docker, you can start the database with:
-  ```bash
-  docker-compose -f .docker/postgres-compose.yaml up -d
-  ```
-
-### Running Migrations
-
-1. **Configure Alembic**: Ensure that the `alembic/env.py` file is correctly set up to connect to your database. The connection settings are managed through environment variables in your `.env` file.
-
-2. **Create a New Migration**: To create a new migration script, run the following command:
-   ```bash
-   alembic revision --autogenerate -m "Description of changes"
-   ```
-
-   This will generate a new migration script in the `alembic/versions` directory.
-
-3. **Review the Migration Script**: Open the generated migration script and review it to ensure it accurately reflects the changes you want to make to the database schema.
-
-4. **Apply the Migration**: To apply the migration to the database, run:
-   ```bash
-   alembic upgrade head
-   ```
-
-   This command will apply all pending migrations up to the latest one.
-
-5. **Verify the Database**: Check your database to ensure that the schema has been updated as expected.
-
-
-## Database Maintenance
-
-The shared database is deployed using Opentofu (see the terraform directory).
-
-A connection example (adding db password and address as required):
-
-```
-PGPASSWORD=### psql -h ### -U postgres -d dsst_etl -c "\l"
-```
-
-To list snapshots:
-```
-aws rds describe-db-snapshots --db-instance-identifier dsst-etl-postgres-prod --query 'DBSnapshots[*].{SnapshotId:DBSnapshotIdentifier,SnapshotType:SnapshotType,Status:Status,Created:SnapshotCreateTime}'
-```
-
-To manually create a snapshot:
-```
-aws rds create-db-snapshot \
-    --db-instance-identifier dsst-etl-postgres-prod \
-    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
-```
-
-To delete a snapshot:
-```
-aws rds delete-db-snapshot \
-    --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
-```
-
-### Troubleshooting
-
-- If you encounter any issues, ensure that your database connection settings in the `.env` file are correct.
-- Check the Alembic logs for any error messages that might indicate what went wrong.
-
-For more detailed information on using Alembic, refer to the [Alembic documentation](https://alembic.sqlalchemy.org/en/latest/).
 
