@@ -12,9 +12,9 @@ from dsst_etl.models import Documents, Identifier, OddpubMetrics, Provenance, Wo
 from .config import config
 
 
-class UploadPDFsTitleIsPMID:
+class DocumentInventoryPMID:
     """
-    Uploads PDFs to S3 where the title is the PMID.
+    Inventory PDFs to S3 where the title is the PMID.
     """
 
     def __init__(
@@ -33,7 +33,7 @@ class UploadPDFsTitleIsPMID:
 
         This method performs the following steps:
         1. Retrieves an iterator for paginated S3 objects.
-        2. Creates a provenance entry for the current upload process.
+        2. Creates a provenance entry for the current inventory process.
         3. Iterates over each page of S3 objects, processing each PDF file:
         - Skips non-PDF files.
         - Computes the hash of the PDF content.
@@ -62,11 +62,11 @@ class UploadPDFsTitleIsPMID:
     def _create_provenance_entry(self):
         # Creates a provenance entry to track the current upload process
         provenance = Provenance(
-            pipeline_name="Oddpub Analysis",
+            pipeline_name="PMID Inventory and Oddpub Analysis",
             version=__version__,
             compute=get_compute_context_id(),
             personnel=config.HOSTNAME,
-            comment="Upload PDFs where the title is the PMID",
+            comment="Creating document inventory of PDFs where the title is the PMID",
         )
         self.db_session.add(provenance)
         self.db_session.commit()
