@@ -21,7 +21,7 @@ source .venv/bin/activate
 The scripts will have different requirements for resource access (s3 buckets, Postgres DB, internet, APIs, etc.)
 
 Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker:
-
+Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker/podman:
 ```bash
 docker compose -f .docker/postgres-compose.yaml up -d
 ```
