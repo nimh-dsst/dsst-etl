@@ -56,7 +56,7 @@ pytest
 
 ### Database Setup
 
-To set up the database for this project, follow these steps:
+Prior to running any services, the user must create the database specified in the .mockenv/.env file. The database is named `pdx` by default. To set up the database for this project, follow these steps:
 
 1. **Create the Database**:
    - If the database does not exist, you need to create it. This can be done using a database client or command line tool specific to your database system. For example, using PostgreSQL, you might run:
