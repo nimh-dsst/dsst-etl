@@ -4,7 +4,6 @@ A collection of scripts for extracting, transforming, and loading data.
 
 ## Development setup
 
-
 The following will allow you to run the scripts in this project:
 
 ```
@@ -31,7 +30,8 @@ docker compose -f .docker/postgres-compose.yaml up -d
 ### Tidying the local database resources
 
 The following will remove the postgres container and its associated volume (the -v flag).
-```
+
+```bash
 docker compose -f .docker/postgres-compose.yaml down -v
 ```
 
@@ -39,12 +39,11 @@ docker compose -f .docker/postgres-compose.yaml down -v
 
 If you are developing locally you should make use of pre-commit hooks to ensure that your code is formatted correctly and passes linting checks.
 
-```
+```bash
 pre-commit install
 # run the pre-commit hooks on all files
    pre-commit run --all-files
 ```
-
 
 ### Run the tests
 
@@ -58,14 +57,16 @@ pytest
 
 To set up the database for this project, follow these steps:
 
-1. **Create the Database**: 
+1. **Create the Database**:
    - If the database does not exist, you need to create it. This can be done using a database client or command line tool specific to your database system. For example, using PostgreSQL, you might run:
+
      ```bash
      createdb your_database_name
      ```
 
 2. **Initialize the Database Schema**:
    - Once the database is created, you need to apply the database schema using Alembic. Run the following command to apply all migrations:
+
      ```bash
      alembic upgrade head
      ```
@@ -75,7 +76,6 @@ To set up the database for this project, follow these steps:
 3. **Verify the Setup**:
    - After running the migrations, verify that the database schema is correctly set up by checking the tables and their structures.
 
-
 ### Database Migrations
 
 This project uses Alembic for database migrations. Follow the steps below to generate and apply migrations to the database.
@@ -83,6 +83,7 @@ This project uses Alembic for database migrations. Follow the steps below to gen
 #### Prerequisites
 
 - Ensure your database is running. If you're using Docker, you can start the database with:
+
   ```bash
   docker-compose -f .docker/postgres-compose.yaml up -d
   ```
@@ -92,6 +93,7 @@ This project uses Alembic for database migrations. Follow the steps below to gen
 1. **Configure Alembic**: Ensure that the `alembic/env.py` file is correctly set up to connect to your database. The connection settings are managed through environment variables in your `.env` file.
 
 2. **Create a New Migration**: To create a new migration script, run the following command:
+
    ```bash
    alembic revision --autogenerate -m "Description of changes"
    ```
@@ -101,6 +103,7 @@ This project uses Alembic for database migrations. Follow the steps below to gen
 3. **Review the Migration Script**: Open the generated migration script and review it to ensure it accurately reflects the changes you want to make to the database schema.
 
 4. **Apply the Migration**: To apply the migration to the database, run:
+
    ```bash
    alembic upgrade head
    ```
@@ -116,42 +119,42 @@ This project uses Alembic for database migrations. Follow the steps below to gen
 
 For more detailed information on using Alembic, refer to the [Alembic documentation](https://alembic.sqlalchemy.org/en/latest/).
 
-
 ### Database Maintenance
 
 The shared database is deployed using Opentofu (see the terraform directory).
 
 A connection example (adding db password and address as required):
 
-```
+```bash
 PGPASSWORD=<password> psql -h <host> -U postgres -d dsst_etl -c "\l"
 ```
 
 To list snapshots:
-```
+
+```bash
 aws rds describe-db-snapshots --db-instance-identifier dsst-etl-postgres-prod --query 'DBSnapshots[*].{SnapshotId:DBSnapshotIdentifier,SnapshotType:SnapshotType,Status:Status,Created:SnapshotCreateTime}'
 ```
 
 To manually create a snapshot:
-```
+
+```bash
 aws rds create-db-snapshot \
     --db-instance-identifier dsst-etl-postgres-prod \
     --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
 ```
 
 To delete a snapshot:
-```
+
+```bash
 aws rds delete-db-snapshot \
     --db-snapshot-identifier dsst-etl-postgres-prod-manual-1
 ```
 
+## Script descriptions
 
+### get_ipids.py
 
-# Script descriptions
-
-## get_ipids.py
-
-### 'IC': Institute or Center abbreviation
+#### 'IC': Institute or Center abbreviation
 
 - Values are defined in the list 'ICs', which includes abbreviations for various NIH institutes and centers.
 
@@ -166,34 +169,34 @@ aws rds delete-db-snapshot \
   - Regular expression (re.findall) is used to extract IPID numbers from the response text.
   - For each unique IPID, a row with 'IC', 'YEAR', and 'IPID' is added to the CSV, avoiding duplicates.
 
-## get_pmids.py
+### get_pmids.py
 
-### 'PI': Principal Investigator(s)
+#### 'PI': Principal Investigator(s)
 
 - The 'headings' and 'showname' HTML elements are searched for relevant labels to extract the names of Principal Investigators.
 
-### 'PMID': PubMed ID
+#### 'PMID': PubMed ID
 
 - A regular expression is used to find patterns matching PubMed IDs in the HTML content.
 
-### 'DOI': Digital Object Identifier
+#### 'DOI': Digital Object Identifier
 
 - A regular expression is used to find patterns matching DOI values in the HTML content.
 
-### 'PROJECT': Project associated with the report
+#### 'PROJECT': Project associated with the report
 
 - Extracted from the 'contentlabel' HTML element within the reports.
 
-## get_pmids_articles.py
+### get_pmids_articles.py
 
-### 'pmids_articles.csv': Filtered CSV containing articles that meet specific criteria
+#### 'pmids_articles.csv': Filtered CSV containing articles that meet specific criteria
 
 - Removes publications with types: ['Review', 'Comment', 'Editorial', 'Published Erratum'].
 - Only includes publications identified as articles based on PubMed API data.
 
-## data_conversion.py
+### data_conversion.py
 
-### Fetches information for PubMed articles, specifically titles and journal names
+#### Fetches information for PubMed articles, specifically titles and journal names
 
 - 'pmid': PubMed ID (unique identifier for a publication in PubMed).
 - 'title': Title of the PubMed article.
@@ -237,4 +240,3 @@ _ renv
 - [Open Data Detection in Publications (ODDPub)](https://github.com/quest-bih/oddpub). Required for [rtransparent](https://github.com/serghiou/rtransparent). *Must us v6.0!* If installing manually run `devtools::install_github("quest-bih/oddpub@v6")`. Updated ODDPub uses different parameters in latest version than is
 - [CrossRef Minter (crminer)](https://github.com/cran/crminer). Required for [metareadr](https://github.com/serghiou/metareadr)
 _ [Meta Reader (metareadr)](https://github.com/serghiou/metareadr). Required for [rtransparent](https://github.com/serghiou/rtransparent).
-
