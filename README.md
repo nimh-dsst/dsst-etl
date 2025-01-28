@@ -7,7 +7,7 @@ A collection of scripts for extracting, transforming, and loading data.
 The following will allow you to run the scripts in this project:
 
 ```
-#install uv
+```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # install all dependencies
 uv sync --all-extras
