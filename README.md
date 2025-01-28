@@ -6,7 +6,8 @@ A collection of scripts for extracting, transforming, and loading data.
 
 The following will allow you to run the scripts in this project:
 
-```
+### install uv
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # install all dependencies
@@ -21,7 +22,7 @@ The scripts will have different requirements for resource access (s3 buckets, Po
 
 Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker:
 
-```
+```bash
 docker compose -f .docker/postgres-compose.yaml up -d
 ```
 
@@ -49,7 +50,7 @@ pre-commit install
 
 You can run the test suite (assuming you have activated the virtual environment and set up required resources) with the following command:
 
-```
+```bash
 pytest
 ```
 
@@ -121,7 +122,7 @@ For more detailed information on using Alembic, refer to the [Alembic documentat
 
 ### Database Maintenance
 
-The shared database is deployed using Opentofu (see the terraform directory).
+The shared database is deployed using OpenTofu (see the terraform directory).
 
 A connection example (adding db password and address as required):
 
