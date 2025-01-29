@@ -53,6 +53,18 @@ You can run the test suite (assuming you have activated the virtual environment 
 pytest
 ```
 
+### Object Storage for development
+
+For local development/testing Minio is included in the compose stack. This runs a local server that exposes an S3-compatible API with the bucket `dsst-pdfs`.
+
+To use this from the command line:
+
+```
+AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin aws s3api list-objects --endpoint-url http://localhost:9000 --bucket dsst-pdfs
+```
+
+A web interface is also available at `http://localhost:9001`.
+
 ### Database Setup
 
 Prior to running any services, the user must create the database specified in the .mockenv/.env file. The database is named `pdx` by default. To set up the database for this project, follow these steps:
