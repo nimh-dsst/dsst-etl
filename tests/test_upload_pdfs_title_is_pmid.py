@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from dsst_etl.models import Documents, Identifier, OddpubMetrics, Works
-from dsst_etl.upload_pdfs_title_is_pmid import UploadPDFsTitleIsPMID
+from dsst_etl.upload_pdfs_title_is_pmid import DocumentInventoryPMID
 
 from tests.base_test import BaseTest  # type: ignore
 
 
-class TestUploadPDFsTitleIsPMID(BaseTest):
+class TestDocumentInventoryPMID(BaseTest):
 
     @patch('dsst_etl.upload_pdfs_title_is_pmid.boto3.client')
     @patch('dsst_etl.upload_pdfs_title_is_pmid.get_bucket_name')
@@ -19,7 +19,7 @@ class TestUploadPDFsTitleIsPMID(BaseTest):
         mock_get_bucket_name.return_value = 'mock-bucket'
 
         # Initialize the class with the mocked session
-        self.uploader = UploadPDFsTitleIsPMID(self.session, oddpub_host_api='http://mock-api:8071')
+        self.uploader = DocumentInventoryPMID(self.session, oddpub_host_api='http://mock-api:8071')
 
     @patch('requests.post')
     def test_process_s3_inventory_success(self, mock_post):
