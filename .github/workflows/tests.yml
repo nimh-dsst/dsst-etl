@@ -3,8 +3,6 @@ name: Tests
 on:
   push:
     branches: [ '*' ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   pre-commit:
@@ -37,35 +35,36 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install uv
-          pip install .[ci]
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv sync --all-extras
 
       - name: Start Docker stack
         run: |
           cp .mockenv .env
-          docker compose -f .docker/postgres-compose.yaml up -d
+          docker compose up -d
           # Wait for PostgreSQL to be ready
           timeout 20 bash -c 'until docker exec $(docker ps -q -f name=postgres) pg_isready; do sleep 1; done'
           docker ps
 
       - name: Initialize database
         run: |
-          alembic upgrade heads
+          uv run alembic upgrade heads
 
       - name: Run Alembic check
         run: |
+          source .venv/bin/activate
           chmod +x alembic_check.sh
           ./alembic_check.sh
 
       - name: Run tests with coverage
         run: |
-          coverage run -m pytest -s tests
-          coverage report
-          coverage xml
+          uv run coverage run -m pytest -s tests
+          uv run coverage report
+          uv run coverage xml
 
       - name: Stop Docker stack
         if: always()
-        run: docker compose -f .docker/postgres-compose.yaml down -v --remove-orphans
+        run: docker compose down -v --remove-orphans
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

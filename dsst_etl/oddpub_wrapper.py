@@ -1,14 +1,12 @@
-import logging
 from pathlib import Path
 
 import requests
 from sqlalchemy.orm import Session
 
+from dsst_etl import logger
 from dsst_etl.models import OddpubMetrics
 
 from .config import config
-
-logger = logging.getLogger(__name__)
 
 
 class OddpubWrapper:

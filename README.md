@@ -20,10 +20,9 @@ source .venv/bin/activate
 
 The scripts will have different requirements for resource access (s3 buckets, Postgres DB, internet, APIs, etc.)
 
-Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker:
 Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker/podman:
 ```bash
-docker compose -f .docker/postgres-compose.yaml up -d
+docker compose up --build
 ```
 
 ## Other development notes
@@ -33,7 +32,7 @@ docker compose -f .docker/postgres-compose.yaml up -d
 The following will remove the postgres container and its associated volume (the -v flag).
 
 ```bash
-docker compose -f .docker/postgres-compose.yaml down -v
+docker compose down -v
 ```
 
 ### Install the pre-commit hooks
@@ -43,7 +42,7 @@ If you are developing locally you should make use of pre-commit hooks to ensure 
 ```bash
 pre-commit install
 # run the pre-commit hooks on all files
-   pre-commit run --all-files
+pre-commit run --all-files
 ```
 
 ### Run the tests
@@ -53,6 +52,18 @@ You can run the test suite (assuming you have activated the virtual environment 
 ```bash
 pytest
 ```
+
+### Object Storage for development
+
+For local development/testing Minio is included in the compose stack. This runs a local server that exposes an S3-compatible API with the bucket `dsst-pdfs`.
+
+To use this from the command line:
+
+```
+AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin aws s3api list-objects --endpoint-url http://localhost:9000 --bucket dsst-pdfs
+```
+
+A web interface is also available at `http://localhost:9001`.
 
 ### Database Setup
 
