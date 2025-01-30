@@ -60,7 +60,7 @@ class DocumentInventoryPMID:
         return paginator.paginate(Bucket=self.bucket_name)
 
     def _create_provenance_entry(self):
-        # Creates a provenance entry to track the current upload process
+        # Creates a provenance entry to track the current inventory process
         provenance = Provenance(
             pipeline_name="PMID Inventory and Oddpub Analysis",
             version=__version__,
