@@ -36,5 +36,5 @@ From: condaforge/mambaforge:24.3.0-0
     /bin/bash /app/entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
 
 %runscript
-    /bin/bash chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh
     /bin/bash /app/entrypoint.sh "$@"
