@@ -21,6 +21,7 @@ source .venv/bin/activate
 The scripts will have different requirements for resource access (s3 buckets, Postgres DB, internet, APIs, etc.)
 
 Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker/podman:
+
 ```bash
 docker compose up --build
 ```
@@ -252,3 +253,19 @@ _ renv
 - [Open Data Detection in Publications (ODDPub)](https://github.com/quest-bih/oddpub). Required for [rtransparent](https://github.com/serghiou/rtransparent). *Must us v6.0!* If installing manually run `devtools::install_github("quest-bih/oddpub@v6")`. Updated ODDPub uses different parameters in latest version than is
 - [CrossRef Minter (crminer)](https://github.com/cran/crminer). Required for [metareadr](https://github.com/serghiou/metareadr)
 _ [Meta Reader (metareadr)](https://github.com/serghiou/metareadr). Required for [rtransparent](https://github.com/serghiou/rtransparent).
+
+### Podman compose setup
+
+Podman is an open-source container engine that is a drop-in replacement for Docker. The following instructions will help you set up a Podman compose stack for local development.
+
+#### Install Podman Desktop
+
+[Podman Desktop](https://podman-desktop.io/)
+
+#### Install Podman Compose
+
+[Podman Compose](https://podman-desktop.io/docs/compose)
+
+#### Set up ROOT certificate in Podman
+
+For users whose systems use a certificate signed by a non-standard Certificate Authority (CA), you will need to add the CA certificate to the Podman trust store. See [these instructions](https://github.com/containers/podman/blob/main/docs/tutorials/podman-install-certificate-authority.md) for installing the certificate.
