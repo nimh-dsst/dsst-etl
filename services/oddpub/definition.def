@@ -11,11 +11,10 @@ From: condaforge/mambaforge:24.3.0-0
     source /opt/conda/etc/profile.d/conda.sh
     
     # Set up shell and working directory
-    mkdir -p /app
     cd /app
 
     # Set permissions on entrypoint script first
-    chmod 755 /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh
 
     # Install system dependencies
     apt-get update && apt-get install -y poppler-utils
@@ -37,4 +36,5 @@ From: condaforge/mambaforge:24.3.0-0
     /bin/bash /app/entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
 
 %runscript
+    /bin/bash chmod +x /app/entrypoint.sh
     /bin/bash /app/entrypoint.sh "$@"
