@@ -7,6 +7,9 @@ From: condaforge/mambaforge:24.3.0-0
     _entrypoint.sh /usr/local/bin/_entrypoint.sh
 
 %post
+    exec /bin/bash
+    source /opt/conda/etc/profile.d/conda.sh
+    
     # Set up shell and working directory
     mkdir -p /app
     cd /app
@@ -15,11 +18,10 @@ From: condaforge/mambaforge:24.3.0-0
     apt-get update && apt-get install -y poppler-utils
 
     # Set up conda environment
-    source /opt/conda/etc/profile.d/conda.sh
     conda env create -f environment.yaml
 
     # Add conda environment activation to various shell startup files
-    echo "source /opt/conda/etc/profile.d/conda.sh && conda activate osm" | tee -a ~/.bashrc /etc/profile /etc/profile.d/conda.sh /etc/skel/.bashrc /etc/skel/.profile > /dev/null
+    echo ". /opt/conda/etc/profile.d/conda.sh && conda activate osm" | tee -a ~/.bashrc /etc/profile /etc/profile.d/conda.sh /etc/skel/.bashrc /etc/skel/.profile > /dev/null
 
     # Install oddpub from GitHub
     R -e 'devtools::install_github("quest-bih/oddpub",ref="c5b091c7e82ed6177192dc380a515b3dc6304863")'
