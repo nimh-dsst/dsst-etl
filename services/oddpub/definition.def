@@ -14,7 +14,9 @@ From: condaforge/mambaforge:24.3.0-0
     cd /app
 
     # Set permissions on entrypoint script first
-    chmod +x /app/entrypoint.sh
+    chmod +x entrypoint.sh
+    # Check the permissions - this will show in build logs
+    ls -l entrypoint.sh
 
     # Install system dependencies
     apt-get update && apt-get install -y poppler-utils
@@ -36,5 +38,4 @@ From: condaforge/mambaforge:24.3.0-0
     /bin/bash /app/entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
 
 %runscript
-    chmod +x /app/entrypoint.sh
     /bin/bash /app/entrypoint.sh "$@"
