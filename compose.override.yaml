@@ -1,0 +1,56 @@
+name: dsst_etl_override
+services:
+  postgres:
+    image: postgres:15
+    container_name: dsst_postgres_db
+    env_file: ".env"
+    ports:
+      - "5432:5432"
+    volumes:
+      - dsst_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s  # Added missing timeout value
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: dsst_minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ADDRESS: ":9000"
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./tests/pdf-test:/test-pdfs
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/dsst-pdfs;
+      /usr/bin/mc anonymous set public myminio/dsst-pdfs;
+      /usr/bin/mc cp /test-pdfs/test1.pdf myminio/dsst-pdfs/;
+      /usr/bin/mc cp /test-pdfs/test2.pdf myminio/dsst-pdfs/;
+      exit 0;
+      "
+
+volumes:
+  dsst_postgres_data:
+  minio_data:

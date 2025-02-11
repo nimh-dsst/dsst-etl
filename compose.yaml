@@ -1,0 +1,9 @@
+name: dsst_etl
+services:
+  oddpub:
+    container_name: dsst_oddpub_service
+    build:
+      context: services/oddpub
+      dockerfile: Dockerfile
+    ports:
+      - "8071:8071"

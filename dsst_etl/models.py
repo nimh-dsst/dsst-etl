@@ -268,7 +268,7 @@ class OddpubMetrics(Base):
     __tablename__ = "oddpub_metrics"
 
     id = Column(Integer, primary_key=True)
-    article = Column(String, unique=True, nullable=True, index=True)
+    article = Column(String, nullable=True)
     is_open_data = Column(Boolean, nullable=True, default=False)
     open_data_category = Column(String)
     is_reuse = Column(Boolean, nullable=True, default=False)

@@ -20,10 +20,10 @@ source .venv/bin/activate
 
 The scripts will have different requirements for resource access (s3 buckets, Postgres DB, internet, APIs, etc.)
 
-Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker:
 Instead of accessing the centralized Postgres server used for sharing you can deploy one locally using docker/podman:
+
 ```bash
-docker compose -f .docker/postgres-compose.yaml up -d
+docker compose up --build
 ```
 
 ## Other development notes
@@ -33,7 +33,7 @@ docker compose -f .docker/postgres-compose.yaml up -d
 The following will remove the postgres container and its associated volume (the -v flag).
 
 ```bash
-docker compose -f .docker/postgres-compose.yaml down -v
+docker compose down -v
 ```
 
 ### Install the pre-commit hooks
@@ -43,7 +43,7 @@ If you are developing locally you should make use of pre-commit hooks to ensure 
 ```bash
 pre-commit install
 # run the pre-commit hooks on all files
-   pre-commit run --all-files
+pre-commit run --all-files
 ```
 
 ### Run the tests
@@ -53,6 +53,18 @@ You can run the test suite (assuming you have activated the virtual environment 
 ```bash
 pytest
 ```
+
+### Object Storage for development
+
+For local development/testing Minio is included in the compose stack. This runs a local server that exposes an S3-compatible API with the bucket `dsst-pdfs`.
+
+To use this from the command line:
+
+```
+AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin aws s3api list-objects --endpoint-url http://localhost:9000 --bucket dsst-pdfs
+```
+
+A web interface is also available at `http://localhost:9001`.
 
 ### Database Setup
 
@@ -241,3 +253,19 @@ _ renv
 - [Open Data Detection in Publications (ODDPub)](https://github.com/quest-bih/oddpub). Required for [rtransparent](https://github.com/serghiou/rtransparent). *Must us v6.0!* If installing manually run `devtools::install_github("quest-bih/oddpub@v6")`. Updated ODDPub uses different parameters in latest version than is
 - [CrossRef Minter (crminer)](https://github.com/cran/crminer). Required for [metareadr](https://github.com/serghiou/metareadr)
 _ [Meta Reader (metareadr)](https://github.com/serghiou/metareadr). Required for [rtransparent](https://github.com/serghiou/rtransparent).
+
+### Podman compose setup
+
+Podman is an open-source container engine that is a drop-in replacement for Docker. The following instructions will help you set up a Podman compose stack for local development.
+
+#### Install Podman Desktop
+
+[Podman Desktop](https://podman-desktop.io/)
+
+#### Install Podman Compose
+
+[Podman Compose](https://podman-desktop.io/docs/compose)
+
+#### Set up ROOT certificate in Podman
+
+For users whose systems use a certificate signed by a non-standard Certificate Authority (CA), you will need to add the CA certificate to the Podman trust store. See [these instructions](https://github.com/containers/podman/blob/main/docs/tutorials/podman-install-certificate-authority.md) for installing the certificate.
