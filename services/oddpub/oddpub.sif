@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: condaforge/mambaforge:24.3.0-0
+
+%files
+    environment.yaml /app/environment.yaml
+    app.py /app/app.py
+    _entrypoint.sh /usr/local/bin/_entrypoint.sh
+
+%post
+    # Set up shell and working directory
+    mkdir -p /app
+    cd /app
+
+    # Install system dependencies
+    apt-get update && apt-get install -y poppler-utils
+
+    # Set up conda environment
+    source /opt/conda/etc/profile.d/conda.sh
+    conda env create -f environment.yaml
+
+    # Add conda environment activation to various shell startup files
+    echo "source /opt/conda/etc/profile.d/conda.sh && conda activate osm" | tee -a ~/.bashrc /etc/profile /etc/profile.d/conda.sh /etc/skel/.bashrc /etc/skel/.profile > /dev/null
+
+    # Install oddpub from GitHub
+    R -e 'devtools::install_github("quest-bih/oddpub",ref="c5b091c7e82ed6177192dc380a515b3dc6304863")'
+
+    # Make entrypoint script executable
+    chmod +x /usr/local/bin/_entrypoint.sh
+
+%environment
+    export PATH=/opt/conda/bin:$PATH
+    export SHELL=/bin/bash
+
+%startscript
+    exec /usr/local/bin/_entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
+
+%runscript
+    exec /usr/local/bin/_entrypoint.sh "$@"
