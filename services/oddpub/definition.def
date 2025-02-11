@@ -26,15 +26,16 @@ From: condaforge/mambaforge:24.3.0-0
     # Install oddpub from GitHub
     R -e 'devtools::install_github("quest-bih/oddpub",ref="c5b091c7e82ed6177192dc380a515b3dc6304863")'
 
-    # Make entrypoint script executable
-    chmod +x /usr/local/bin/_entrypoint.sh
+    # Make entrypoint script executable and ensure proper ownership
+    chmod 755 /usr/local/bin/_entrypoint.sh
+    chown root:root /usr/local/bin/_entrypoint.sh
 
 %environment
     export PATH=/opt/conda/bin:$PATH
     export SHELL=/bin/bash
 
 %startscript
-    exec /usr/local/bin/_entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
+    /bin/bash /usr/local/bin/_entrypoint.sh fastapi dev --host 0.0.0.0 --port 8071
 
 %runscript
-    exec /usr/local/bin/_entrypoint.sh "$@"
+    /bin/bash /usr/local/bin/_entrypoint.sh "$@"
